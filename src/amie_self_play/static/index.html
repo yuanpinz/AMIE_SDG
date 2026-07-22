@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="论文对齐版医疗对话 self-play 研究原型" />
+    <title>AMIE Self-play Lab</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="page-glow glow-one"></div>
+    <div class="page-glow glow-two"></div>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="AMIE Self-play Lab 首页">
+          <span class="brand-mark">A</span>
+          <span><b>AMIE</b><small>SELF-PLAY LAB</small></span>
+        </a>
+        <div class="research-badge"><span></span> 研究模拟 · 非医疗建议</div>
+      </header>
+
+      <section class="hero">
+        <div class="eyebrow">PAPER-ALIGNED INNER SELF-PLAY</div>
+        <h1>把一次问诊，<em>练成三次。</em></h1>
+        <p>同一个虚拟病例，由 Patient、Doctor、Moderator 与 Critic 协作，观察医生如何在反馈中改进问诊。</p>
+
+        <div class="launch-card">
+          <label for="condition">Medical condition</label>
+          <div class="input-row">
+            <div class="autocomplete">
+              <input id="condition" type="text" autocomplete="off" placeholder="输入中文或英文疾病，例如：腕管综合征" />
+              <div id="suggestions" class="suggestions" role="listbox" hidden></div>
+            </div>
+            <button id="startButton" class="primary-button" disabled>开始模拟 <span>→</span></button>
+          </div>
+          <div class="model-config">
+            <label for="modelSelect">Agent 基座模型</label>
+            <div class="model-select-wrap">
+              <select id="modelSelect" disabled>
+                <option>正在载入模型列表…</option>
+              </select>
+              <span class="select-chevron">⌄</span>
+            </div>
+            <span id="modelMeta" class="model-meta">来自模型 API 配置文件</span>
+          </div>
+          <div class="quick-picks">
+            <span>试试</span>
+            <button data-condition="腕管综合征">腕管综合征</button>
+            <button data-condition="Migraine">Migraine</button>
+            <button data-condition="Type 2 Diabetes">Type 2 Diabetes</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="workflow-card" aria-label="Self-play workflow">
+        <div class="flow-node" data-flow="vignette"><span class="node-icon">✦</span><div><b>Vignette</b><small>生成完整病例</small></div></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" data-flow="patient"><span class="node-icon patient-icon">P</span><div><b>Patient</b><small>按需透露信息</small></div></div>
+        <span class="flow-arrow double">⇄</span>
+        <div class="flow-node" data-flow="doctor"><span class="node-icon doctor-icon">D</span><div><b>Doctor</b><small>未知真实诊断</small></div></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" data-flow="moderator"><span class="node-icon moderator-icon">M</span><div><b>Moderator</b><small>判断是否结束</small></div></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" data-flow="ddx"><span class="node-icon ddx-icon">Dx</span><div><b>Doctor DDx</b><small>会诊后排序</small></div></div>
+        <span class="flow-arrow loop">↻</span>
+        <div class="flow-node" data-flow="critic"><span class="node-icon critic-icon">C</span><div><b>Critic</b><small>每轮结束评价</small></div></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" data-flow="evaluation"><span class="node-icon evaluation-icon">E</span><div><b>Evaluation</b><small>论文量表代理评分</small></div></div>
+      </section>
+
+      <section id="workspace" class="workspace is-empty">
+        <div id="emptyState" class="empty-state">
+          <div class="empty-orbit"><span>D</span><i>P</i></div>
+          <h2>等待一项 medical condition</h2>
+          <p>生成的完整病例只会交给 Patient 和 Critic，Doctor 将从零开始问诊。</p>
+        </div>
+
+        <div id="simulationView" class="simulation-view" hidden>
+          <div class="status-strip">
+            <div class="live-status"><span id="liveDot" class="live-dot"></span><b id="phaseLabel">准备中</b></div>
+            <div class="status-item"><small>ROUND</small><strong id="roundLabel">1 / 3</strong></div>
+            <div class="status-item model-status"><small>MODEL</small><strong id="modelLabel">—</strong></div>
+            <div class="status-item"><small>ELAPSED</small><strong id="elapsedLabel">00:00</strong></div>
+            <div class="status-actions">
+              <button id="stopButton" class="ghost-button">停止</button>
+              <button id="restartButton" class="ghost-button">重新开始</button>
+            </div>
+          </div>
+
+          <div class="round-tabs" id="roundTabs" role="tablist">
+            <button class="round-tab active" data-round="1" role="tab">Round 1 <span>Baseline</span></button>
+            <button class="round-tab" data-round="2" role="tab" disabled>Round 2 <span>Critic 1</span></button>
+            <button class="round-tab" data-round="3" role="tab" disabled>Round 3 <span>Critic 2</span></button>
+          </div>
+
+          <div class="content-grid">
+            <aside class="vignette-panel panel">
+              <div class="panel-heading">
+                <div><span class="section-kicker">CASE FILE</span><h2>Vignette</h2></div>
+                <span class="private-tag">Doctor 不可见</span>
+              </div>
+              <div id="vignetteSkeleton" class="skeleton-list">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div id="vignetteContent" class="vignette-content" hidden></div>
+            </aside>
+
+            <section class="dialogue-panel panel">
+              <div class="panel-heading dialogue-heading">
+                <div><span class="section-kicker">SIMULATED CONSULTATION</span><h2 id="dialogueTitle">Round 1 对话</h2></div>
+                <span id="utteranceCount" class="utterance-count">0 / 30</span>
+              </div>
+              <div id="dialogueTimeline" class="dialogue-timeline"></div>
+              <div id="typingIndicator" class="typing-indicator" hidden><span></span><span></span><span></span><em>正在生成</em></div>
+              <div id="moderatorCard" class="moderator-card" hidden></div>
+              <div id="criticCard" class="critic-card" hidden></div>
+            </section>
+
+            <aside class="ddx-panel panel">
+              <div class="panel-heading ddx-heading">
+                <div><span class="section-kicker">POST-CONSULTATION</span><h2>Doctor DDx</h2></div>
+                <span class="private-tag">仅基于对话</span>
+              </div>
+              <div id="ddxEmpty" class="ddx-empty">
+                <span>Dx</span>
+                <p>本轮对话结束后生成</p>
+                <small>按可能性排序 · 3–10 项</small>
+              </div>
+              <div id="ddxSkeleton" class="ddx-skeleton" hidden>
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <ol id="ddxList" class="ddx-list" hidden></ol>
+            </aside>
+          </div>
+
+          <section id="evaluationPanel" class="evaluation-panel panel" aria-labelledby="evaluationTitle">
+            <div class="evaluation-heading">
+              <div>
+                <span class="section-kicker">PAPER-ALIGNED RUBRICS</span>
+                <h2 id="evaluationTitle">Evaluation</h2>
+              </div>
+              <div class="proxy-note">
+                <b>Model-based proxy</b>
+                <span>不能替代真实患者或专科医生评价</span>
+              </div>
+            </div>
+
+            <div id="evaluationEmpty" class="evaluation-empty">
+              <span>E</span>
+              <div><b>等待本轮评价</b><small>DDx 与 Critic 完成后自动开始</small></div>
+            </div>
+
+            <div id="evaluationSkeleton" class="evaluation-skeleton" hidden aria-label="Evaluation 正在生成">
+              <div class="skeleton-summary"><i></i><i></i><i></i><i></i></div>
+              <div class="skeleton-lines"><i></i><i></i><i></i></div>
+            </div>
+
+            <div id="evaluationContent" class="evaluation-content" hidden>
+              <div class="evaluation-status-row">
+                <div><small>ROUND STATUS</small><b id="evaluationStatus">Complete</b></div>
+                <span id="evaluationCoverage">4 / 4 groups</span>
+              </div>
+
+              <div id="evaluationErrors" class="evaluation-errors" hidden></div>
+
+              <section class="evaluation-summary" aria-labelledby="evaluationSummaryTitle">
+                <div class="summary-title">
+                  <div><span class="section-kicker">AT A GLANCE</span><h3 id="evaluationSummaryTitle">本轮评分摘要</h3></div>
+                  <small>单病例二元命中，不是跨病例 accuracy 百分比</small>
+                </div>
+                <div class="summary-grid">
+                  <div class="accuracy-summary-block">
+                    <h4>Diagnostic Accuracy</h4>
+                    <div id="topKMatrix" class="topk-matrix"></div>
+                  </div>
+                  <div class="distribution-summary-block">
+                    <h4>Rating Distribution</h4>
+                    <div id="distributionGrid" class="distribution-grid"></div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="evaluation-tabs" role="tablist" aria-label="Evaluation result views">
+                <button class="evaluation-tab active" data-evaluation-tab="accuracy" role="tab" aria-selected="true">Accuracy</button>
+                <button class="evaluation-tab" data-evaluation-tab="patient_actor" role="tab" aria-selected="false">Patient Actor</button>
+                <button class="evaluation-tab" data-evaluation-tab="specialist" role="tab" aria-selected="false">Specialist</button>
+                <button class="evaluation-tab" data-evaluation-tab="auto_paces" role="tab" aria-selected="false">Auto PACES</button>
+              </div>
+
+              <div class="evaluation-tab-panels">
+                <section id="accuracyEvaluation" class="evaluation-tab-panel" data-evaluation-panel="accuracy"></section>
+                <section id="patientActorEvaluation" class="evaluation-tab-panel" data-evaluation-panel="patient_actor" hidden></section>
+                <section id="specialistEvaluation" class="evaluation-tab-panel" data-evaluation-panel="specialist" hidden></section>
+                <section id="autoPacesEvaluation" class="evaluation-tab-panel" data-evaluation-panel="auto_paces" hidden></section>
+              </div>
+            </div>
+
+            <div id="roundActions" class="round-actions evaluation-actions" hidden>
+              <button id="refineButton" class="primary-button refine-button">根据 Critic 生成下一轮 <span>→</span></button>
+              <p>评分不会反馈给下一轮 Doctor；下一轮只吸收 Critic。</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <footer>
+        <p>本页面用于研究模拟，不能用于真实诊断或治疗决策。遇到健康问题，请咨询有资质的医疗专业人员。</p>
+        <span><b id="footerModel">—</b> · No web search · 30 utterance guardrail</span>
+      </footer>
+    </main>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

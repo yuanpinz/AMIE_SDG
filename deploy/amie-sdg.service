@@ -1,0 +1,17 @@
+[Unit]
+Description=AMIE medical dialogue self-play service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/amie_sdg
+Environment=PYTHONUNBUFFERED=1
+Environment=AMIE_MODEL_CONFIG=%h/amie_sdg/config/model_apis.json
+ExecStart=%h/amie_sdg/.venv/bin/uvicorn amie_self_play.app:app --app-dir src --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

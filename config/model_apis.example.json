@@ -1,0 +1,37 @@
+{
+  "default_model": "primary-chat",
+  "timeout_seconds": 120,
+  "max_retries": 1,
+  "models": [
+    {
+      "name": "primary-chat",
+      "real_name": "Example OpenAI-compatible model",
+      "endpoint": "https://api.example.com/v1/chat/completions",
+      "model": "example-chat-model",
+      "model_field": "model",
+      "api_key_env": "PRIMARY_LLM_API_KEY",
+      "api_key_header": "Authorization",
+      "api_key_prefix": "Bearer ",
+      "context_length": 128000,
+      "support_stream": false,
+      "image_input": false
+    },
+    {
+      "name": "custom-gateway",
+      "real_name": "Example custom gateway model",
+      "endpoint": "https://gateway.example.com/chat",
+      "model": "gateway-model-id",
+      "model_field": "model_name",
+      "api_key_env": "GATEWAY_API_KEY",
+      "headers": {
+        "X-Client": "amie-self-play"
+      },
+      "body": {
+        "enable_thinking": false
+      },
+      "context_length": 64000,
+      "support_stream": false,
+      "image_input": false
+    }
+  ]
+}
