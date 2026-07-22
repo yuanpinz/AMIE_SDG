@@ -112,16 +112,21 @@ async def test_strict_baseline_order_and_context_boundaries() -> None:
         event for event in events if event["type"] == "evaluation_completed"
     )
     review_event = next(event for event in events if event["type"] == "round_review_completed")
+    ready_event = next(event for event in events if event["type"] == "round_review_ready")
     assert critique_event["critique"].startswith("CRITIQUE_SENTINEL")
     assert evaluation_event["status"] == "complete"
     assert len(evaluation_event["patient_actor"]["criteria"]) == 26
     assert len(evaluation_event["specialist"]["criteria"]) == 32
     assert len(evaluation_event["auto_paces"]["criteria"]) == 4
+    assert ready_event["can_refine"] is True
     assert review_event["can_refine"] is True
 
     event_types = [event["type"] for event in events]
     assert event_types.index("ddx_completed") < event_types.index("critique_completed")
     assert event_types.index("critique_completed") < event_types.index(
+        "round_review_ready"
+    )
+    assert event_types.index("round_review_ready") < event_types.index(
         "evaluation_completed"
     )
     assert event_types.index("evaluation_completed") < event_types.index(
@@ -171,6 +176,70 @@ async def test_strict_baseline_order_and_context_boundaries() -> None:
     assert "CRITIQUE_SENTINEL" in second_doctor_text
     assert "gmcpq_being_polite" not in second_doctor_text
     assert "不得照搬其中的 Markdown" in second_doctor_text
+
+
+class BlockingEvaluationLLM(FakeLLM):
+    evaluation_roles = {
+        "ACCURACY_RATER",
+        "PATIENT_ACTOR_RATER",
+        "SPECIALIST_RATER",
+        "AUTO_PACES_RATER",
+    }
+
+    def __init__(self, **responses: list[str]) -> None:
+        super().__init__(**responses)
+        self.evaluation_started = asyncio.Event()
+        self.release_evaluation = asyncio.Event()
+
+    async def complete(self, messages, **kwargs):
+        role = self.role_for(messages)
+        if role in self.evaluation_roles:
+            self.evaluation_started.set()
+            await self.release_evaluation.wait()
+        return await super().complete(messages, **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_refine_can_start_while_previous_evaluation_runs_in_background() -> None:
+    fake = BlockingEvaluationLLM(
+        VIGNETTE=[json_text(vignette_payload())],
+        PATIENT=["第一轮患者回复。", "第二轮患者回复。"],
+        DOCTOR=["第一轮医生回复。", "第二轮医生回复。"],
+        MODERATOR=[json_text(moderator_payload())] * 2,
+        DDX=[json_text(ddx_payload())] * 2,
+        CRITIC=["第一轮 Critic。", "第二轮 Critic。"],
+        **evaluation_responses(2),
+    )
+    events, send = await collect_events()
+    first_ready = asyncio.Event()
+    second_ready = asyncio.Event()
+    evaluations_completed = asyncio.Event()
+
+    async def tracked_send(event: dict) -> None:
+        await send(event)
+        if event["type"] == "round_review_ready":
+            (first_ready if event["round"] == 1 else second_ready).set()
+        if len(
+            [item for item in events if item["type"] == "evaluation_completed"]
+        ) == 2:
+            evaluations_completed.set()
+
+    session = SimulationSession(fake, tracked_send)
+    await session.launch_start("腕管综合征")
+    await asyncio.wait_for(first_ready.wait(), 1)
+    await asyncio.wait_for(fake.evaluation_started.wait(), 1)
+
+    assert session.busy is False
+    assert session.rounds[0].evaluation is None
+
+    await session.launch_refine()
+    await asyncio.wait_for(second_ready.wait(), 1)
+    assert len(session.rounds) == 2
+
+    fake.release_evaluation.set()
+    await asyncio.wait_for(evaluations_completed.wait(), 1)
+    assert all(round_state.evaluation is not None for round_state in session.rounds)
+    await session.disconnect()
 
 
 @pytest.mark.asyncio

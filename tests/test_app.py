@@ -216,11 +216,15 @@ def test_websocket_start_runs_complete_event_protocol() -> None:
     assert "dialogue_completed" in event_types
     assert "ddx_completed" in event_types
     assert "critique_completed" in event_types
+    assert "round_review_ready" in event_types
     assert "evaluation_completed" in event_types
     assert event_types[-1] == "round_review_completed"
     assert event_types.index("dialogue_completed") < event_types.index("ddx_completed")
     assert event_types.index("ddx_completed") < event_types.index("critique_completed")
     assert event_types.index("critique_completed") < event_types.index(
+        "round_review_ready"
+    )
+    assert event_types.index("round_review_ready") < event_types.index(
         "evaluation_completed"
     )
     evaluation = next(

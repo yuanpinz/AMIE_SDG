@@ -14,6 +14,7 @@ const state = {
   startedAt: null,
   timer: null,
   pendingRestart: false,
+  awaitingSimulationStart: false,
   selectedEvaluationTab: "accuracy",
   eventQueue: Promise.resolve(),
 };
@@ -92,6 +93,7 @@ function startSimulation() {
   }
   state.condition = condition;
   state.model = $("#modelSelect").value || state.model;
+  state.awaitingSimulationStart = true;
   resetSimulation();
   state.startedAt = Date.now();
   startTimer();
@@ -103,11 +105,22 @@ function startSimulation() {
 async function handleEvent(event) {
   switch (event.type) {
     case "simulation_started":
+      state.awaitingSimulationStart = false;
       state.model = event.model;
       $("#modelLabel").textContent = event.model;
       $("#footerModel").textContent = event.model;
       break;
     case "phase_started":
+      if (event.phase === "evaluation" && event.round) {
+        if (state.awaitingSimulationStart) break;
+        state.rounds[event.round].evaluationLoading = true;
+        if (!state.running) {
+          $("#phaseLabel").textContent = "Evaluation 正在后台运行";
+          setActiveFlow(event.phase);
+        }
+        if (event.round === state.selectedRound) renderEvaluation(event.round);
+        break;
+      }
       state.activeRound = event.round || state.activeRound;
       setRunning(true, phaseNames[event.phase] || event.phase);
       setActiveFlow(event.phase);
@@ -115,10 +128,6 @@ async function handleEvent(event) {
       if (event.phase === "dialogue" && event.round > 1) {
         enableRound(event.round);
         selectRound(event.round);
-      }
-      if (event.phase === "evaluation" && event.round) {
-        state.rounds[event.round].evaluationLoading = true;
-        if (event.round === state.selectedRound) renderEvaluation(event.round);
       }
       break;
     case "vignette_completed":
@@ -149,6 +158,7 @@ async function handleEvent(event) {
       if (event.round === state.selectedRound) renderCritic(event.critique, event.round);
       break;
     case "evaluation_completed":
+      if (state.awaitingSimulationStart) break;
       state.rounds[event.round].evaluation = event;
       state.rounds[event.round].evaluationLoading = false;
       if (event.round === state.selectedRound) renderEvaluation(event.round);
@@ -166,11 +176,17 @@ async function handleEvent(event) {
       }
       if (event.status === "truncated") showToast(event.reason, 5000);
       break;
-    case "round_review_completed": {
+    case "round_review_ready": {
+      if (state.awaitingSimulationStart) break;
       const round = state.rounds[event.round];
       round.reviewed = true;
-      round.completion = { ...round.completion, ...event, review_pending: false };
-      setRunning(false, event.status === "truncated" ? "已完成截断轮复盘" : `Round ${event.round} 复盘完成`);
+      round.completion = {
+        ...round.completion,
+        ...event,
+        review_pending: false,
+        evaluation_pending: true,
+      };
+      setRunning(false, event.status === "truncated" ? "已完成截断轮复盘" : `Round ${event.round} Critic 复盘完成`);
       if (event.round === state.selectedRound) {
         renderRoundActions(round.completion);
         renderEvaluation(event.round);
@@ -178,11 +194,31 @@ async function handleEvent(event) {
       }
       break;
     }
+    case "round_review_completed": {
+      if (state.awaitingSimulationStart) break;
+      const round = state.rounds[event.round];
+      round.completion = {
+        ...round.completion,
+        ...event,
+        review_pending: false,
+        evaluation_pending: false,
+      };
+      if (!state.running && event.round === state.activeRound) {
+        $("#phaseLabel").textContent = `Round ${event.round} 复盘与评分完成`;
+      }
+      if (event.round === state.selectedRound) {
+        renderRoundActions(round.completion);
+        renderEvaluation(event.round);
+      }
+      break;
+    }
     case "error":
+      state.awaitingSimulationStart = false;
       setRunning(false, "发生错误");
       showToast(event.message || "模拟失败", 6000);
       break;
     case "stopped":
+      state.awaitingSimulationStart = false;
       setRunning(false, "已停止");
       if (state.pendingRestart) {
         state.pendingRestart = false;

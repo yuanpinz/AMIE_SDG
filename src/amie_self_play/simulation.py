@@ -103,6 +103,7 @@ class SimulationSession:
         self.rounds: list[RoundState] = []
         self.critiques: list[CritiqueState] = []
         self._task: asyncio.Task[None] | None = None
+        self._evaluation_tasks: set[asyncio.Task[None]] = set()
 
     @property
     def busy(self) -> bool:
@@ -116,6 +117,7 @@ class SimulationSession:
         condition = condition.strip()
         if not condition:
             raise SimulationStateError("请输入 medical condition")
+        await self._cancel_evaluations()
         self.condition = condition
         if model_name:
             self.model_name = model_name
@@ -147,8 +149,6 @@ class SimulationSession:
             raise SimulationStateError("只有自然结束的对话才能生成改进轮")
         if not any(item.round_number == current.round_number for item in self.critiques):
             raise SimulationStateError("请等待当前轮 Critic 评价完成")
-        if current.evaluation is None:
-            raise SimulationStateError("请等待当前轮 Evaluation 完成")
         await self._run_dialogue(current.round_number + 1)
         await self._review_round(self.rounds[-1])
 
@@ -331,7 +331,19 @@ class SimulationSession:
             critique=critique_state.content,
         )
 
-        await self._evaluate_round(round_state)
+        await self.emit(
+            "round_review_ready",
+            round=round_number,
+            status=round_state.status,
+            can_refine=can_refine,
+            next_round=round_number + 1 if can_refine else None,
+        )
+        evaluation_task = self._schedule_evaluation(round_state)
+        # The Critic review is the end of the interactive work. Release the
+        # session slot while the slower Evaluation task continues in parallel.
+        if self._task is asyncio.current_task():
+            self._task = None
+        await evaluation_task
         await self.emit(
             "round_review_completed",
             round=round_number,
@@ -339,6 +351,36 @@ class SimulationSession:
             can_refine=can_refine,
             next_round=round_number + 1 if can_refine else None,
         )
+
+    def _schedule_evaluation(self, round_state: RoundState) -> asyncio.Task[None]:
+        task = asyncio.create_task(self._run_evaluation_background(round_state))
+        self._evaluation_tasks.add(task)
+        task.add_done_callback(self._evaluation_tasks.discard)
+        return task
+
+    async def _run_evaluation_background(self, round_state: RoundState) -> None:
+        try:
+            await self._evaluate_round(round_state)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            # Evaluation is deliberately best-effort: it must not invalidate the
+            # already completed Critic review or prevent the next round.
+            evaluation = EvaluationState(
+                status="failed",
+                errors={"evaluation": EvaluationError(
+                    category="internal_error",
+                    code="evaluation_failed",
+                    message=str(exc) or type(exc).__name__,
+                )},
+            )
+            round_state.evaluation = evaluation
+            with suppress(Exception):
+                await self.emit(
+                    "evaluation_completed",
+                    round=round_state.round_number,
+                    **evaluation.model_dump(),
+                )
 
     async def _evaluate_round(self, round_state: RoundState) -> None:
         round_number = round_state.round_number
@@ -659,6 +701,7 @@ class SimulationSession:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        await self._cancel_evaluations()
         self._task = None
         await self.emit(
             "stopped",
@@ -672,4 +715,13 @@ class SimulationSession:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+        await self._cancel_evaluations()
         self._task = None
+
+    async def _cancel_evaluations(self) -> None:
+        evaluation_tasks = tuple(self._evaluation_tasks)
+        for evaluation_task in evaluation_tasks:
+            if not evaluation_task.done():
+                evaluation_task.cancel()
+        if evaluation_tasks:
+            await asyncio.gather(*evaluation_tasks, return_exceptions=True)

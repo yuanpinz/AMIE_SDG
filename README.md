@@ -1,6 +1,6 @@
 # 论文对齐版医疗对话 Self-play 原型
 
-本目录实现了 AMIE 论文 inner self-play 的交互原型：Vignette Generator、Patient、Doctor、Moderator 与 Critic 通过 WebSocket 编排，最多进行三轮同病例问诊和两次 Critic 改进反馈。每轮结束后按 `Doctor DDx → Critic → Evaluation` 执行，并生成论文量表对齐的模型代理评分。
+本目录实现了 AMIE 论文 inner self-play 的交互原型：Vignette Generator、Patient、Doctor、Moderator 与 Critic 通过 WebSocket 编排，最多进行三轮同病例问诊和两次 Critic 改进反馈。每轮结束后先执行 `Doctor DDx → Critic`；Critic 复盘完成后即可进入下一轮，论文量表对齐的 Evaluation 模型代理评分会在后台继续运行。
 
 ## 论文来源
 
@@ -33,6 +33,26 @@
 
 ![Evaluation 评分结果](docs/screenshots/04-evaluation-results.png)
 
+## 每轮复盘与后台 Evaluation
+
+每轮对话自然结束后的状态流转如下：
+
+1. Doctor 仅根据本轮 transcript 生成 3–10 项 DDx。
+2. Critic 结合病例参考信息和本轮对话生成复盘结论。
+3. Critic 完成后，页面立即显示“根据 Critic 生成下一轮”按钮；Round 1/2 可以分别进入 Round 2/3，无需等待 Evaluation。
+4. Accuracy、Patient Actor、Specialist 和 Auto PACES 四组 Evaluation 在后台并行运行，不占用下一轮生成状态。
+5. Evaluation 完成后，结果通过 WebSocket 回填到其所属轮次。即使用户已经进入下一轮，切回上一轮标签仍可查看完整结果。
+
+相关 WebSocket 事件按以下语义发送：
+
+- `critique_completed`：Critic 文本已经生成。
+- `round_review_ready`：Critic 复盘已可用于下一轮；前端据此解锁按钮，服务端也开始接受 `refine`。
+- `phase_started`（`phase=evaluation`）：该轮 Evaluation 已在后台启动。
+- `evaluation_completed`：该轮评分结果已回填，状态可能是 `complete`、`partial` 或 `failed`。
+- `round_review_completed`：Critic 和 Evaluation 均已结束的兼容性最终事件。
+
+Evaluation 不会进入后续 Doctor 或 Patient 的上下文；下一轮 Doctor 只吸收历史对话与 Critic 反馈。
+
 ## 启动
 
 先创建本地模型 API 配置：
@@ -40,10 +60,10 @@
 ```bash
 cp config/model_apis.example.json config/model_apis.json
 uv sync
-uv run uvicorn amie_self_play.app:app --app-dir src --reload
+uv run uvicorn amie_self_play.app:app --app-dir src --host 127.0.0.1 --port 8000 --reload
 ```
 
-打开 <http://127.0.0.1:8000>。默认配置：
+打开 <http://127.0.0.1:8000>，使用 `Ctrl+C` 停止服务。默认配置：
 
 - 模型列表和默认模型来自 `config/model_apis.json`
 - 服务启动时读取配置，网页通过 `/api/models` 加载可选模型
@@ -211,9 +231,10 @@ uv run pytest
 - 每次只生成一个 vignette，而非论文原 prompt 的两个。
 - Vignette 包含 ground truth、3–10 项 accepted differential 和参考管理计划；Case File 对研究用户可见，但 Doctor、Moderator 和 DDx 均不可见。
 - 基线 Doctor prompt 不提前加入 Critic 的“至少两个鉴别诊断”等强化标准。
-- 每轮结束后自动显示 Critic 评价；Round 1/2 的 Critic 可分别用于生成 Round 2/3，Evaluation 评分不会进入后续 Doctor 或 Patient 上下文。
+- 每轮结束后自动显示 Critic 评价；Critic 结论一旦完成，Round 1/2 即可分别生成 Round 2/3，不需要等待该轮 Evaluation。
 - Doctor DDx 是独立的会诊后输出，只读取本轮 transcript，并按可能性给出 3–10 个诊断。
-- Evaluation 使用当前所选基座模型并行运行 Accuracy、Patient Actor、Specialist 和 Auto PACES 四组独立评审。单组无效会修复一次；失败只产生 partial 结果，不阻塞回合完成。
+- Evaluation 使用当前所选基座模型在后台并行运行 Accuracy、Patient Actor、Specialist 和 Auto PACES 四组独立评审。单组无效会修复一次；部分失败产生 `partial`，全部失败产生 `failed`，两者都不会阻塞 Critic 复盘或下一轮生成。
+- 后台 Evaluation 结果按轮次保存并通过 WebSocket 回填；用户进入下一轮后，仍可切回上一轮查看评分。
 - Patient Actor、Specialist 和 Auto PACES 分别固定为论文的 26、32 和 4 个评分轴。页面明确将其标为 model-based proxy，不能替代真实患者或专科医生评价。
 - Accuracy 仅展示当前单病例相对 ground truth 和 accepted differential 的 Top-1、Top-3、Top-10 二元命中，不计算跨病例百分比或跨量表总分。
 - 模型下拉列表由服务启动时读取的 `config/model_apis.json` 提供；所选模型用于该次模拟的所有 agent 调用。
