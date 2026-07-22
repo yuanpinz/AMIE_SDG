@@ -38,6 +38,14 @@ button { cursor: pointer; }
 
 .topbar { height: 82px; display: flex; align-items: center; justify-content: space-between; }
 .topbar-actions { display: flex; align-items: center; gap: 17px; }
+.account-control { min-height: 44px; display: inline-grid; grid-template-columns: 31px minmax(44px, auto) auto; align-items: center; gap: 8px; padding: 5px 6px; border: 1px solid #dfe2df; border-radius: 8px; color: #56625c; background: rgba(255,255,255,.82); }
+.account-initial { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 6px; color: white; background: #6d8e7e; font: 700 11px Georgia, serif; }
+.account-copy { min-width: 0; }
+.account-copy small, .account-copy b { display: block; overflow: hidden; max-width: 110px; text-overflow: ellipsis; white-space: nowrap; }
+.account-copy small { color: #9a9f9c; font-size: 7px; }
+.account-copy b { margin-top: 2px; font-size: 9px; }
+.account-control button { height: 29px; border: 0; border-left: 1px solid #e4e6e4; padding: 0 6px 0 10px; color: #8a777e; background: transparent; font-size: 9px; }
+.account-control button:hover { color: #a34e63; }
 .admin-link { min-height: 44px; display: inline-flex; align-items: center; gap: 9px; padding: 5px 11px 5px 6px; border: 1px solid rgba(149, 92, 107, .18); border-radius: 8px; color: #664f57; background: rgba(255,255,255,.82); box-shadow: 0 6px 18px rgba(99, 54, 66, .08); text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
 .admin-link:hover { border-color: #d8a0ad; box-shadow: 0 9px 22px rgba(112, 60, 74, .13); transform: translateY(-1px); }
 .admin-link-icon { flex: 0 0 auto; width: 31px; height: 31px; display: grid; place-items: center; border-radius: 6px; color: #a34e63; background: #fae9ed; font-size: 14px; font-weight: 700; transition: color .18s ease, background .18s ease; }
@@ -340,6 +348,9 @@ footer span { white-space: nowrap; }
   .topbar { height: 68px; }
   .research-badge { display: none; }
   .topbar-actions { gap: 8px; }
+  .account-copy { display: none; }
+  .account-control { grid-template-columns: 29px auto; gap: 4px; min-height: 40px; padding: 4px; }
+  .account-initial { width: 29px; height: 29px; }
   .admin-link { min-height: 40px; padding: 4px 9px 4px 5px; }
   .admin-link-icon { width: 29px; height: 29px; }
   .hero { padding-top: 38px; }

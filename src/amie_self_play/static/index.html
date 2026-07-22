@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="论文对齐版医疗对话 self-play 研究原型" />
     <title>AMIE Self-play Lab</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260722-2" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260722-4" />
   </head>
   <body>
     <div class="page-glow glow-one"></div>
@@ -21,6 +21,11 @@
             <span class="admin-link-icon" aria-hidden="true">⚙</span>
             <span class="admin-link-copy"><small>CONTROL</small><b>提示词配置</b></span>
           </a>
+          <div class="account-control">
+            <span id="accountInitial" class="account-initial">U</span>
+            <span class="account-copy"><small>USER</small><b id="accountName">—</b></span>
+            <button id="logoutButton" type="button" title="退出登录">退出</button>
+          </div>
           <div class="research-badge"><span></span> 研究模拟 · 非医疗建议</div>
         </div>
       </header>
@@ -216,6 +221,6 @@
     </main>
 
     <div id="toast" class="toast" role="status" hidden></div>
-    <script src="/static/app.js?v=20260722-3" defer></script>
+    <script src="/static/app.js?v=20260722-4" defer></script>
   </body>
 </html>

@@ -11,14 +11,7 @@
 .prompt-safety-note b { font-size: 11px; }
 .prompt-safety-note small { margin-top: 4px; color: #809188; font-size: 9px; line-height: 1.5; }
 
-.auth-panel { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 16px; padding: 16px 18px; border: 1px solid #e7c1ca; border-radius: 15px; background: #fff6f8; box-shadow: 0 10px 28px rgba(90, 54, 64, .06); }
-.auth-panel b { color: #854d5a; font-size: 12px; }
-.auth-panel p { margin: 5px 0 0; color: #8f747c; font-size: 10px; }
-.auth-panel code, .prompt-admin-footer code { padding: 2px 5px; border-radius: 5px; color: #79515b; background: #f6e9ec; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.auth-controls { display: flex; gap: 8px; min-width: 420px; }
-.auth-controls input { flex: 1; height: 41px; border: 1px solid #e3c7ce; border-radius: 10px; padding: 0 12px; color: #51484c; background: white; outline: none; }
-.auth-controls input:focus { border-color: #cf8092; box-shadow: 0 0 0 3px rgba(207, 128, 146, .12); }
-.auth-controls .primary-button { min-width: 115px; }
+.prompt-admin-footer code { padding: 2px 5px; border-radius: 5px; color: #79515b; background: #f6e9ec; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 .prompt-workspace { display: grid; grid-template-columns: minmax(265px, .7fr) minmax(590px, 2fr); gap: 15px; align-items: start; margin-bottom: 28px; }
 .agent-sidebar { position: sticky; top: 14px; max-height: calc(100vh - 28px); display: flex; flex-direction: column; }
@@ -116,8 +109,6 @@
   .agent-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 350px; }
   .agent-nav-button { margin-bottom: 3px; }
   .config-source { display: none; }
-  .auth-panel { display: block; }
-  .auth-controls { min-width: 0; margin-top: 12px; }
 }
 
 @media (max-width: 560px) {
@@ -133,7 +124,6 @@
   .editor-footer { display: block; }
   .editor-footer-actions { margin-top: 14px; }
   .editor-footer-actions button { flex: 1; }
-  .auth-controls { display: grid; }
   .prompt-admin-footer { display: block; }
   .prompt-admin-footer span { display: block; margin-top: 8px; }
 }

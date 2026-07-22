@@ -4,11 +4,20 @@ import json
 from collections import defaultdict, deque
 from typing import Any
 
+import pytest
+
+from amie_self_play.prompt_config import default_prompt_config_path
 from amie_self_play.rubrics import (
     AUTO_PACES_RUBRIC,
     PATIENT_ACTOR_RUBRIC,
     SPECIALIST_RUBRIC,
 )
+
+
+@pytest.fixture(autouse=True)
+def isolated_user_data(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("AMIE_USER_DATA_DIR", str(tmp_path / "user-data"))
+    monkeypatch.setenv("AMIE_PROMPT_CONFIG", str(default_prompt_config_path()))
 
 
 def vignette_payload(condition: str = "SECRET_CONDITION") -> dict[str, Any]:

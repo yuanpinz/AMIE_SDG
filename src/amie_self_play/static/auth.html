@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="AMIE Self-play Lab 账户登录" />
+    <title>账户 · AMIE Self-play Lab</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260722-4" />
+    <link rel="stylesheet" href="/static/auth.css?v=20260722-4" />
+  </head>
+  <body class="auth-body">
+    <main class="auth-shell">
+      <header class="auth-topbar">
+        <a class="brand" href="/" aria-label="AMIE Self-play Lab 首页">
+          <span class="brand-mark">A</span>
+          <span><b>AMIE</b><small>SELF-PLAY LAB</small></span>
+        </a>
+        <div class="research-badge"><span></span> 研究模拟 · 非医疗建议</div>
+      </header>
+
+      <section class="auth-stage">
+        <div class="auth-heading">
+          <span class="eyebrow">ACCOUNT ACCESS</span>
+          <h1 id="authTitle">登录账户</h1>
+          <p id="authSubtitle">继续进入你的模拟工作区和个人提示词配置。</p>
+        </div>
+
+        <form id="authForm" class="auth-form">
+          <div class="auth-mode" role="tablist" aria-label="账户操作">
+            <button class="active" data-auth-mode="login" type="button" role="tab" aria-selected="true">登录</button>
+            <button data-auth-mode="register" type="button" role="tab" aria-selected="false">注册</button>
+          </div>
+
+          <label for="username">用户名</label>
+          <input id="username" name="username" type="text" minlength="3" maxlength="32" autocomplete="username" required />
+
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" minlength="10" maxlength="128" autocomplete="current-password" required />
+
+          <div id="confirmGroup" hidden>
+            <label for="confirmPassword">确认密码</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" />
+          </div>
+
+          <p id="authError" class="auth-error" role="alert" hidden></p>
+          <button id="authSubmit" class="primary-button auth-submit" type="submit">登录</button>
+        </form>
+      </section>
+
+      <footer class="auth-footer">
+        本页面用于研究模拟，不能用于真实诊断或治疗决策。
+      </footer>
+    </main>
+    <script src="/static/auth.js?v=20260722-4" defer></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+.auth-body { min-height: 100vh; background: #f8f7f7; }
+.auth-shell { width: min(100% - 32px, 980px); min-height: 100vh; display: flex; flex-direction: column; margin: 0 auto; }
+.auth-topbar { min-height: 82px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e9e3e4; }
+.auth-stage { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); align-items: center; gap: 80px; padding: 48px 0 64px; }
+.auth-heading h1 { margin: 15px 0 10px; color: #4d4247; font: 500 46px Georgia, "Songti SC", serif; letter-spacing: 0; }
+.auth-heading p { max-width: 420px; margin: 0; color: #84777c; font-size: 13px; line-height: 1.8; }
+.auth-form { padding: 27px; border: 1px solid #e1d9db; border-radius: 8px; background: white; box-shadow: 0 18px 45px rgba(76, 54, 62, .08); }
+.auth-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-bottom: 25px; padding: 3px; border: 1px solid #e5dfe1; border-radius: 7px; background: #f7f5f5; }
+.auth-mode button { height: 35px; border: 0; border-radius: 5px; color: #85787d; background: transparent; font-size: 11px; }
+.auth-mode button.active { color: #7e4050; background: white; box-shadow: 0 2px 8px rgba(87, 55, 64, .09); }
+.auth-form label { display: block; margin: 16px 0 7px; color: #61565a; font-size: 10px; font-weight: 700; }
+.auth-form input { width: 100%; height: 44px; border: 1px solid #ded7d9; border-radius: 7px; padding: 0 12px; color: #433b3e; background: #fffefe; outline: none; }
+.auth-form input:focus { border-color: #c7798c; box-shadow: 0 0 0 3px rgba(199, 121, 140, .12); }
+.auth-error { margin: 14px 0 0; color: #a83e57; font-size: 10px; line-height: 1.6; }
+.auth-submit { width: 100%; height: 43px; margin-top: 22px; }
+.auth-footer { min-height: 62px; display: flex; align-items: center; border-top: 1px solid #e9e3e4; color: #9a8e93; font-size: 9px; }
+
+@media (max-width: 760px) {
+  .auth-stage { display: block; padding-top: 44px; }
+  .auth-heading { margin-bottom: 30px; }
+  .auth-heading h1 { font-size: 38px; }
+  .auth-form { max-width: 480px; }
+}
+
+@media (max-width: 520px) {
+  .auth-shell { width: min(100% - 22px, 980px); }
+  .auth-topbar { min-height: 68px; }
+  .auth-topbar .research-badge { display: none; }
+  .auth-stage { padding: 34px 0 42px; }
+  .auth-form { padding: 20px; }
+}

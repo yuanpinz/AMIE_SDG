@@ -11,6 +11,7 @@ from typing import Any
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_DIR / "config" / "model_apis.json"
 DEFAULT_PROMPT_CONFIG_PATH = PROJECT_DIR / "config" / "prompts.toml"
+DEFAULT_USER_DATA_DIR = PROJECT_DIR / "data"
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
@@ -33,7 +34,7 @@ class Settings:
     max_retries: int = 1
     config_path: Path = DEFAULT_CONFIG_PATH
     prompt_config_path: Path = DEFAULT_PROMPT_CONFIG_PATH
-    prompt_admin_token: str | None = None
+    user_data_dir: Path = DEFAULT_USER_DATA_DIR
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -41,6 +42,7 @@ class Settings:
         if not config_value:
             config_value = os.getenv("MODEL_API_CONFIG", "").strip()
         prompt_config_value = os.getenv("AMIE_PROMPT_CONFIG", "").strip()
+        user_data_value = os.getenv("AMIE_USER_DATA_DIR", "").strip()
         return cls(
             timeout_seconds=float(os.getenv("AMIE_TIMEOUT", "120")),
             max_retries=int(os.getenv("AMIE_MAX_RETRIES", "1")),
@@ -50,8 +52,11 @@ class Settings:
                 if prompt_config_value
                 else DEFAULT_PROMPT_CONFIG_PATH
             ),
-            prompt_admin_token=os.getenv("AMIE_PROMPT_ADMIN_TOKEN", "").strip()
-            or None,
+            user_data_dir=(
+                Path(user_data_value).expanduser()
+                if user_data_value
+                else DEFAULT_USER_DATA_DIR
+            ),
         )
 
 

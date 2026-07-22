@@ -8,7 +8,6 @@ const state = {
   toastTimer: null,
 };
 
-const tokenStorageKey = "amiePromptAdminToken";
 const fieldLabels = {
   system: "System Prompt",
   user: "User Prompt",
@@ -17,8 +16,6 @@ const fieldLabels = {
 
 function adminHeaders(withJson = false) {
   const headers = {};
-  const token = sessionStorage.getItem(tokenStorageKey) || "";
-  if (token) headers["X-AMIE-ADMIN-TOKEN"] = token;
   if (withJson) headers["Content-Type"] = "application/json";
   return headers;
 }
@@ -35,7 +32,10 @@ async function apiRequest(path, options = {}) {
     data = null;
   }
   if (!response.ok) {
-    if (response.status === 401) $("#authPanel").hidden = false;
+    if (response.status === 401) {
+      window.location.assign("/login?next=/admin/prompts");
+      throw new Error("登录已失效");
+    }
     const detail = data?.detail;
     const message = typeof detail === "string"
       ? detail
@@ -227,7 +227,8 @@ function applyCatalog(data, preferredAgent = null) {
       : state.agents[0]?.name || null;
   $("#configSource").textContent = state.source || "—";
   $("#configSource").title = state.source;
-  $("#authPanel").hidden = true;
+  $("#accountName").textContent = data.owner || "—";
+  $("#accountInitial").textContent = (data.owner || "U")[0].toUpperCase();
   renderAgentList();
   renderEditor();
 }
@@ -289,11 +290,9 @@ async function resetCurrentAgent() {
   }
 }
 
-function applyAdminToken() {
-  const token = $("#adminToken").value.trim();
-  if (token) sessionStorage.setItem(tokenStorageKey, token);
-  else sessionStorage.removeItem(tokenStorageKey);
-  loadCatalog();
+async function logout() {
+  await apiRequest("/api/auth/logout", { method: "POST" });
+  window.location.assign("/login");
 }
 
 $("#saveButton").addEventListener("click", saveCurrentAgent);
@@ -301,10 +300,7 @@ $("#saveButtonBottom").addEventListener("click", saveCurrentAgent);
 $("#resetButton").addEventListener("click", resetCurrentAgent);
 $("#resetButtonBottom").addEventListener("click", resetCurrentAgent);
 $("#retryButton").addEventListener("click", loadCatalog);
-$("#applyToken").addEventListener("click", applyAdminToken);
-$("#adminToken").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") applyAdminToken();
-});
+$("#logoutButton").addEventListener("click", logout);
 
 window.addEventListener("beforeunload", (event) => {
   if (!hasUnsavedChanges()) return;
@@ -312,5 +308,4 @@ window.addEventListener("beforeunload", (event) => {
   event.returnValue = "";
 });
 
-$("#adminToken").value = sessionStorage.getItem(tokenStorageKey) || "";
 loadCatalog();

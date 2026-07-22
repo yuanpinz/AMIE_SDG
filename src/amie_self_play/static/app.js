@@ -17,6 +17,7 @@ const state = {
   awaitingSimulationStart: false,
   selectedEvaluationTab: "accuracy",
   eventQueue: Promise.resolve(),
+  user: null,
 };
 
 function freshRound() {
@@ -45,12 +46,35 @@ function connect() {
     const event = JSON.parse(message.data);
     state.eventQueue = state.eventQueue.then(() => handleEvent(event));
   };
-  state.socket.onclose = () => {
+  state.socket.onclose = (event) => {
+    if (event.code === 4401) {
+      window.location.assign("/login?next=/");
+      return;
+    }
     if (state.running) {
       setRunning(false, "连接已断开");
       showToast("与服务端的连接已断开，请重新开始。", 5000);
     }
   };
+}
+
+async function loadAccount() {
+  const response = await fetch("/api/auth/me");
+  if (response.status === 401) {
+    window.location.assign("/login?next=/");
+    return;
+  }
+  if (!response.ok) throw new Error("account unavailable");
+  const data = await response.json();
+  state.user = data.user;
+  $("#accountName").textContent = data.user.username;
+  $("#accountInitial").textContent = data.user.username[0].toUpperCase();
+}
+
+async function logout() {
+  if (state.socket) state.socket.close();
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.assign("/login");
 }
 
 function send(action, extra = {}) {
@@ -876,9 +900,11 @@ $("#restartButton").addEventListener("click", () => {
 });
 $("#stopButton").addEventListener("click", () => send("stop"));
 $("#refineButton").addEventListener("click", () => { setRunning(true, "正在生成改进轮"); send("refine"); });
+$("#logoutButton").addEventListener("click", logout);
 $$('[data-condition]').forEach((button) => button.addEventListener("click", () => { $("#condition").value = button.dataset.condition; }));
 $$(".round-tab").forEach((tab) => tab.addEventListener("click", () => selectRound(Number(tab.dataset.round))));
 $$(".evaluation-tab").forEach((tab) => tab.addEventListener("click", () => selectEvaluationTab(tab.dataset.evaluationTab)));
 
 loadModels();
+loadAccount().catch(() => showToast("账户信息载入失败。", 5000));
 connect();

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="AMIE Self-play agent 提示词配置后台" />
     <title>提示词配置 · AMIE Self-play Lab</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260722-2" />
-    <link rel="stylesheet" href="/static/prompt-config.css?v=20260722-2" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260722-4" />
+    <link rel="stylesheet" href="/static/prompt-config.css?v=20260722-4" />
   </head>
   <body class="prompt-admin-body">
     <div class="page-glow glow-one"></div>
@@ -23,6 +23,11 @@
             <span class="admin-link-icon" aria-hidden="true">←</span>
             <span class="admin-link-copy"><small>WORKSPACE</small><b>返回模拟页面</b></span>
           </a>
+          <div class="account-control">
+            <span id="accountInitial" class="account-initial">U</span>
+            <span class="account-copy"><small>USER</small><b id="accountName">—</b></span>
+            <button id="logoutButton" type="button" title="退出登录">退出</button>
+          </div>
           <div class="research-badge"><span></span> 后台配置</div>
         </div>
       </header>
@@ -36,17 +41,6 @@
         <div class="prompt-safety-note">
           <span>↺</span>
           <div><b>可以安全试验</b><small>每个 Agent 都能单独恢复为仓库内置默认值</small></div>
-        </div>
-      </section>
-
-      <section id="authPanel" class="auth-panel" hidden>
-        <div>
-          <b>需要管理令牌</b>
-          <p>请输入服务启动时通过 <code>AMIE_PROMPT_ADMIN_TOKEN</code> 设置的令牌。</p>
-        </div>
-        <div class="auth-controls">
-          <input id="adminToken" type="password" autocomplete="current-password" placeholder="管理令牌" />
-          <button id="applyToken" class="primary-button" type="button">验证并载入</button>
         </div>
       </section>
 
@@ -123,6 +117,6 @@
     </main>
 
     <div id="promptToast" class="toast" role="status" hidden></div>
-    <script src="/static/prompt-config.js?v=20260722-2" defer></script>
+    <script src="/static/prompt-config.js?v=20260722-4" defer></script>
   </body>
 </html>
