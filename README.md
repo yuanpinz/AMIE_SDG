@@ -15,23 +15,25 @@
 
 ## 界面预览
 
-以下截图展示了一次完整的研究模拟流程（病例：腕管综合征）：从输入疾病和选择模型开始，到多轮问诊、鉴别诊断、Critic 复盘以及最终 Evaluation 评分。截图仅用于说明界面和交互流程，页面中的评分是 model-based proxy，不代表真实临床评价。
+以下截图由 Playwright 在当前多用户版本中生成，展示从注册账户到进入个人模拟工作区、管理独立提示词配置的主要界面。截图使用隔离的演示账户和示例模型配置，不包含真实用户数据或 API 密钥。
 
-### 1. 启动页面与 Self-play 工作流
+### 1. 注册新用户
 
-![启动页面与 Self-play 工作流](docs/screenshots/01-launch-and-workflow.png)
+注册后，每个账户都会获得独立的登录会话和提示词配置文件。
 
-### 2. 多轮问诊与 Doctor DDx
+![注册新用户](docs/screenshots/01-account-access.png)
 
-![多轮问诊与 Doctor DDx](docs/screenshots/02-consultation-and-ddx.png)
+### 2. 个人模拟工作区
 
-### 3. Critic 复盘反馈
+登录后可选择 Agent 基座模型、输入疾病，并启动论文对齐的 inner self-play 流程。
 
-![Critic 复盘反馈](docs/screenshots/03-critic-feedback.png)
+![个人模拟工作区](docs/screenshots/02-personal-workspace.png)
 
-### 4. Evaluation 评分结果
+### 3. 个人提示词配置
 
-![Evaluation 评分结果](docs/screenshots/04-evaluation-results.png)
+每个用户可以独立编辑、保存或恢复各 Agent 的提示词，不会影响其他用户。
+
+![个人提示词配置](docs/screenshots/03-personal-prompt-control.png)
 
 ## 每轮复盘与后台 Evaluation
 
