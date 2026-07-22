@@ -6,6 +6,11 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from amie_self_play.app import create_app, load_models
+from amie_self_play.prompt_config import (
+    load_default_prompt_catalog,
+    load_prompt_catalog,
+    save_prompt_config,
+)
 
 from conftest import FakeLLM
 from conftest import (
@@ -47,6 +52,7 @@ def test_health_page_and_local_disease_autocomplete() -> None:
         assert client.get("/health").json() == {"status": "ok"}
         page = client.get("/")
         assert page.status_code == 200
+        assert 'href="/admin/prompts"' in page.text
         assert "把一次问诊" in page.text
         assert "Model-based proxy" in page.text
         assert "不能替代真实患者或专科医生评价" in page.text
@@ -65,6 +71,79 @@ def test_health_page_and_local_disease_autocomplete() -> None:
             "model-alpha",
             "model-beta",
         ]
+
+
+def test_prompt_admin_page_saves_and_resets_one_agent(
+    tmp_path: Path, monkeypatch
+) -> None:
+    path = tmp_path / "prompts.toml"
+    defaults = load_default_prompt_catalog()
+    save_prompt_config(path, defaults.data)
+    monkeypatch.setenv("AMIE_PROMPT_CONFIG", str(path))
+    monkeypatch.delenv("AMIE_PROMPT_ADMIN_TOKEN", raising=False)
+    app = create_app(llm=FakeLLM(), diseases=[], models=TEST_MODELS)
+
+    with TestClient(app) as client:
+        page = client.get("/admin/prompts")
+        assert page.status_code == 200
+        assert 'id="promptFields"' in page.text
+
+        payload = client.get("/api/admin/prompts").json()
+        assert len(payload["agents"]) == 11
+        doctor = next(item for item in payload["agents"] if item["name"] == "doctor")
+        values = {field["name"]: field["value"] for field in doctor["fields"]}
+        values["system"] += "\nCUSTOM_ADMIN_DOCTOR_PROMPT"
+
+        saved = client.put(
+            "/api/admin/prompts/doctor", json={"values": values}
+        )
+        assert saved.status_code == 200
+        saved_doctor = next(
+            item for item in saved.json()["agents"] if item["name"] == "doctor"
+        )
+        assert saved_doctor["modified"] is True
+        assert "CUSTOM_ADMIN_DOCTOR_PROMPT" in app.state.prompts.data["agent"]["doctor"]["system"]
+        assert "CUSTOM_ADMIN_DOCTOR_PROMPT" in load_prompt_catalog(path).data["agent"]["doctor"]["system"]
+
+        reset = client.post("/api/admin/prompts/doctor/reset")
+        assert reset.status_code == 200
+        reset_doctor = next(
+            item for item in reset.json()["agents"] if item["name"] == "doctor"
+        )
+        assert reset_doctor["modified"] is False
+        assert (
+            load_prompt_catalog(path).data["agent"]["doctor"]
+            == defaults.data["agent"]["doctor"]
+        )
+
+
+def test_prompt_admin_rejects_invalid_prompt_and_supports_token(
+    tmp_path: Path, monkeypatch
+) -> None:
+    path = tmp_path / "prompts.toml"
+    defaults = load_default_prompt_catalog()
+    save_prompt_config(path, defaults.data)
+    monkeypatch.setenv("AMIE_PROMPT_CONFIG", str(path))
+    monkeypatch.setenv("AMIE_PROMPT_ADMIN_TOKEN", "test-admin-token")
+    app = create_app(llm=FakeLLM(), diseases=[], models=TEST_MODELS)
+
+    with TestClient(app) as client:
+        assert client.get("/api/admin/prompts").status_code == 401
+        headers = {"X-AMIE-ADMIN-TOKEN": "test-admin-token"}
+        payload = client.get("/api/admin/prompts", headers=headers).json()
+        doctor = next(item for item in payload["agents"] if item["name"] == "doctor")
+        values = {field["name"]: field["value"] for field in doctor["fields"]}
+        values["system"] = "[ROLE:DOCTOR]\n缺少必要变量"
+
+        response = client.put(
+            "/api/admin/prompts/doctor",
+            headers=headers,
+            json={"values": values},
+        )
+
+        assert response.status_code == 422
+        assert "improvement_context" in response.json()["detail"]
+        assert load_prompt_catalog(path).data == defaults.data
 
 
 def test_model_api_config_is_loaded_without_exposing_connection_details(

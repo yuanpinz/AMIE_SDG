@@ -37,11 +37,20 @@ button { cursor: pointer; }
 .shell { width: min(1380px, calc(100% - 36px)); margin: 0 auto; }
 
 .topbar { height: 82px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-actions { display: flex; align-items: center; gap: 17px; }
+.admin-link { min-height: 44px; display: inline-flex; align-items: center; gap: 9px; padding: 5px 11px 5px 6px; border: 1px solid rgba(149, 92, 107, .18); border-radius: 8px; color: #664f57; background: rgba(255,255,255,.82); box-shadow: 0 6px 18px rgba(99, 54, 66, .08); text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.admin-link:hover { border-color: #d8a0ad; box-shadow: 0 9px 22px rgba(112, 60, 74, .13); transform: translateY(-1px); }
+.admin-link-icon { flex: 0 0 auto; width: 31px; height: 31px; display: grid; place-items: center; border-radius: 6px; color: #a34e63; background: #fae9ed; font-size: 14px; font-weight: 700; transition: color .18s ease, background .18s ease; }
+.admin-link:hover .admin-link-icon { color: white; background: #c76077; }
+.back-link .admin-link-icon { font-size: 17px; }
+.admin-link-copy { display: grid; gap: 1px; }
+.admin-link-copy small { color: #ad929a; font-size: 6px; font-weight: 750; letter-spacing: .15em; line-height: 1; }
+.admin-link-copy b { color: #684f57; font-size: 10px; line-height: 1.3; white-space: nowrap; }
 .brand { color: var(--ink); display: flex; align-items: center; gap: 11px; text-decoration: none; }
 .brand-mark { width: 37px; height: 37px; display: grid; place-items: center; color: white; border-radius: 12px 12px 12px 3px; background: linear-gradient(145deg, #dc8498, #ad5268); font-family: Georgia, serif; font-size: 23px; box-shadow: 0 8px 20px rgba(173, 82, 104, .22); }
 .brand b { display: block; font-family: Georgia, serif; font-size: 18px; letter-spacing: .08em; }
 .brand small { display: block; color: var(--muted); font-size: 8px; letter-spacing: .2em; margin-top: 1px; }
-.research-badge { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.72); border-radius: 999px; padding: 8px 13px; color: #74676e; font-size: 12px; }
+.research-badge { display: flex; align-items: center; gap: 8px; padding: 8px 0; color: #74676e; font-size: 10px; letter-spacing: .03em; }
 .research-badge span { width: 7px; height: 7px; border-radius: 50%; background: #d9768d; box-shadow: 0 0 0 4px rgba(217, 118, 141, .12); }
 
 .hero { text-align: center; padding: 60px 0 42px; }
@@ -329,7 +338,10 @@ footer span { white-space: nowrap; }
 @media (max-width: 650px) {
   .shell { width: min(100% - 22px, 1180px); }
   .topbar { height: 68px; }
-  .research-badge { font-size: 9px; }
+  .research-badge { display: none; }
+  .topbar-actions { gap: 8px; }
+  .admin-link { min-height: 40px; padding: 4px 9px 4px 5px; }
+  .admin-link-icon { width: 29px; height: 29px; }
   .hero { padding-top: 38px; }
   .hero h1 { font-size: 42px; }
   .input-row { display: block; }

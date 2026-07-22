@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="AMIE Self-play agent 提示词配置后台" />
+    <title>提示词配置 · AMIE Self-play Lab</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260722-2" />
+    <link rel="stylesheet" href="/static/prompt-config.css?v=20260722-2" />
+  </head>
+  <body class="prompt-admin-body">
+    <div class="page-glow glow-one"></div>
+    <div class="page-glow glow-two"></div>
+
+    <main class="shell prompt-admin-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="返回 AMIE Self-play Lab 首页">
+          <span class="brand-mark">A</span>
+          <span><b>AMIE</b><small>PROMPT CONTROL</small></span>
+        </a>
+        <div class="topbar-actions">
+          <a class="admin-link back-link" href="/">
+            <span class="admin-link-icon" aria-hidden="true">←</span>
+            <span class="admin-link-copy"><small>WORKSPACE</small><b>返回模拟页面</b></span>
+          </a>
+          <div class="research-badge"><span></span> 后台配置</div>
+        </div>
+      </header>
+
+      <section class="prompt-hero">
+        <div>
+          <span class="eyebrow">AGENT PROMPT CONFIGURATION</span>
+          <h1>让每个 Agent，<em>按你的方式工作。</em></h1>
+          <p>编辑并保存运行时提示词。保存后，新建的模拟会话会立即使用新配置；已在运行的会话保持原配置。</p>
+        </div>
+        <div class="prompt-safety-note">
+          <span>↺</span>
+          <div><b>可以安全试验</b><small>每个 Agent 都能单独恢复为仓库内置默认值</small></div>
+        </div>
+      </section>
+
+      <section id="authPanel" class="auth-panel" hidden>
+        <div>
+          <b>需要管理令牌</b>
+          <p>请输入服务启动时通过 <code>AMIE_PROMPT_ADMIN_TOKEN</code> 设置的令牌。</p>
+        </div>
+        <div class="auth-controls">
+          <input id="adminToken" type="password" autocomplete="current-password" placeholder="管理令牌" />
+          <button id="applyToken" class="primary-button" type="button">验证并载入</button>
+        </div>
+      </section>
+
+      <section class="prompt-workspace">
+        <aside class="agent-sidebar panel">
+          <div class="sidebar-heading">
+            <div><span class="section-kicker">AGENTS</span><h2>提示词角色</h2></div>
+            <span id="agentCount" class="agent-count">—</span>
+          </div>
+          <div id="agentList" class="agent-list" aria-label="Agent 列表">
+            <div class="agent-list-loading"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="config-source">
+            <small>当前配置文件</small>
+            <code id="configSource">正在载入…</code>
+          </div>
+        </aside>
+
+        <section class="prompt-editor panel">
+          <div id="editorLoading" class="editor-loading">
+            <i></i><i></i><i></i>
+            <p>正在读取提示词配置…</p>
+          </div>
+
+          <div id="editorContent" hidden>
+            <header class="editor-heading">
+              <div class="editor-title-row">
+                <span id="agentMark" class="agent-mark">A</span>
+                <div>
+                  <div class="editor-title-line">
+                    <h2 id="agentTitle">Agent</h2>
+                    <span id="agentStatus" class="prompt-status">默认配置</span>
+                  </div>
+                  <p id="agentDescription"></p>
+                </div>
+              </div>
+              <div class="editor-top-actions">
+                <button id="resetButton" class="reset-button" type="button">恢复此 Agent 默认值</button>
+                <button id="saveButton" class="primary-button save-button" type="button" disabled>保存修改</button>
+              </div>
+            </header>
+
+            <div class="template-help">
+              <span>$</span>
+              <p><b>模板变量受保护</b>：每个字段下方列出的 <code>${name}</code> 变量必须保留；系统会在保存前检查缺失或未知变量。</p>
+            </div>
+
+            <div id="promptFields" class="prompt-fields"></div>
+
+            <footer class="editor-footer">
+              <div>
+                <b id="saveState">当前没有未保存修改</b>
+                <small>恢复默认只影响当前 Agent，不会覆盖其他角色。</small>
+              </div>
+              <div class="editor-footer-actions">
+                <button id="resetButtonBottom" class="reset-button" type="button">恢复默认</button>
+                <button id="saveButtonBottom" class="primary-button save-button" type="button" disabled>保存此 Agent</button>
+              </div>
+            </footer>
+          </div>
+
+          <div id="editorError" class="editor-error" hidden>
+            <span>!</span>
+            <div><b>无法载入提示词配置</b><p id="editorErrorMessage"></p></div>
+            <button id="retryButton" class="ghost-button" type="button">重试</button>
+          </div>
+        </section>
+      </section>
+
+      <footer class="prompt-admin-footer">
+        <p>提示词配置只影响后续新建会话。内置默认值始终保存在 <code>config/prompts.example.toml</code> 中。</p>
+        <span>AMIE Self-play · Prompt Control</span>
+      </footer>
+    </main>
+
+    <div id="promptToast" class="toast" role="status" hidden></div>
+    <script src="/static/prompt-config.js?v=20260722-2" defer></script>
+  </body>
+</html>

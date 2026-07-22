@@ -145,6 +145,60 @@ export AMIE_MODEL_CONFIG=/absolute/path/to/model_apis.json
 
 服务不会把 `endpoint`、`headers`、`body` 或密钥返回给浏览器；网页只接收模型展示元数据。
 
+### 提示词配置
+
+所有运行时 agent 的提示词都集中在 `config/prompts.example.toml`，代码只负责填入病例、对话和评分表等动态内容。涉及的角色包括：
+
+- Vignette（病例生成）
+- Patient（模拟患者）
+- Doctor（医生）
+- Moderator（对话结束判断）
+- Doctor DDx（鉴别诊断）
+- Critic（问诊复盘）
+- Accuracy Rater（诊断准确性评审）
+- Patient Actor Rater（患者体验评审）
+- Specialist Rater（专科评审）
+- Auto PACES Rater（自动 PACES 评审）
+- JSON Repair（结构化输出修复）
+
+命令行 `call_model.py` 使用的 system prompt 也由同一文件中的 `meta.cli_system` 提供。首次使用时复制示例文件：
+
+```bash
+cp config/prompts.example.toml config/prompts.toml
+export AMIE_PROMPT_CONFIG=/absolute/path/to/prompts.toml
+```
+
+`config/prompts.toml` 已被 `.gitignore` 忽略，适合放置本地改写，不会随代码提交。配置文件可以只覆盖需要修改的 TOML 小节，其余字段继续使用示例值。常用可配置项包括各 agent 的 `system`、`user` 和 Doctor 的 `improvement` 模板、JSON schema、病例 one-shot 示例、对话标签、Doctor 开场白及 JSON Repair 文本。
+
+例如只替换 Doctor 的 system prompt：
+
+```toml
+[agent.doctor]
+system = """[ROLE:DOCTOR]
+你是我的自定义医生代理。
+${improvement_context}"""
+```
+
+模板中的 `${condition}`、`${transcript}`、`${schema}`、`${vignette_json}`、`${reference_json}`、`${materials_json}`、`${rubric}`、`${prior}` 等占位符由程序运行时替换；修改模板时请保留所需占位符，否则模型将收不到相应上下文。服务启动时读取该文件，网页交互和后续多轮问诊会使用同一份提示词配置。
+
+#### 网页提示词管理
+
+服务启动后可打开 <http://127.0.0.1:8000/admin/prompts>，也可以从模拟首页右上角进入“提示词配置”。管理页支持：
+
+- 查看并修改全部运行时 Agent 的 system、user 及 Doctor improvement prompt。
+- 保存前检查必需的 `${placeholder}` 模板变量，避免因误删变量导致运行失败。
+- 单独保存一个 Agent；保存后新建的模拟会话立即使用新配置，已经运行的会话不受影响。
+- 为每个 Agent 单独“恢复默认”，默认值始终从只读的 `config/prompts.example.toml` 加载，不会覆盖其他 Agent。
+
+未设置管理令牌时，提示词管理 API 只接受本机请求。若需要从其他电脑访问部署后的管理页，应在启动服务前设置令牌：
+
+```bash
+export AMIE_PROMPT_ADMIN_TOKEN='replace-with-a-strong-random-token'
+uv run uvicorn amie_self_play.app:app --app-dir src
+```
+
+网页会提示输入令牌，并仅将令牌保存在当前浏览器标签页的 `sessionStorage` 中。正式提示词保存到 `config/prompts.toml` 或 `AMIE_PROMPT_CONFIG` 指定的文件；内置默认配置不会被网页覆盖。
+
 ## 测试
 
 ```bash

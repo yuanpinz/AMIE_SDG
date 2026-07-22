@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Callable, Coroutine, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from .llm import LLM, ModelAPIError
+from .prompt_config import PromptCatalog, load_prompt_catalog
 from .models import (
     AccuracyEvaluation,
     AccuracyRaterOutput,
@@ -29,14 +30,6 @@ from .models import (
     Vignette,
 )
 from .prompts import (
-    ACCURACY_SCHEMA,
-    AUTO_PACES_SCHEMA,
-    DDX_SCHEMA,
-    DOCTOR_OPENING,
-    MODERATOR_SCHEMA,
-    PATIENT_ACTOR_SCHEMA,
-    SPECIALIST_SCHEMA,
-    VIGNETTE_SCHEMA,
     accuracy_rater_messages,
     auto_paces_rater_messages,
     critic_messages,
@@ -46,6 +39,7 @@ from .prompts import (
     moderator_messages,
     patient_actor_rater_messages,
     patient_messages,
+    rubric_schema,
     specialist_rater_messages,
     vignette_messages,
 )
@@ -96,12 +90,14 @@ class SimulationSession:
         *,
         max_utterances: int = 30,
         model_name: str | None = None,
+        prompts: PromptCatalog | None = None,
     ) -> None:
         self.llm = llm
         self._send_event = send_event
         self._send_lock = asyncio.Lock()
         self.max_utterances = max_utterances
         self.model_name = model_name
+        self.prompts = prompts or load_prompt_catalog()
         self.condition: str | None = None
         self.vignette: Vignette | None = None
         self.rounds: list[RoundState] = []
@@ -131,9 +127,9 @@ class SimulationSession:
         )
         await self.emit("phase_started", phase="vignette", round=0)
         self.vignette = await self._structured(
-            vignette_messages(condition),
+            vignette_messages(condition, self.prompts),
             Vignette,
-            schema=VIGNETTE_SCHEMA,
+            schema=self.prompts.schema("vignette"),
             repair_kind="VIGNETTE",
             max_tokens=1800,
         )
@@ -160,7 +156,7 @@ class SimulationSession:
         messages: list[DialogueMessage] = []
         await self.emit("phase_started", phase="dialogue", round=round_number)
         await self.emit("message_started", role="doctor", round=round_number)
-        opening = DialogueMessage(role="doctor", content=DOCTOR_OPENING)
+        opening = DialogueMessage(role="doctor", content=self.prompts.doctor_opening)
         messages.append(opening)
         await self.emit(
             "message_completed",
@@ -186,7 +182,7 @@ class SimulationSession:
             patient_text = await self._agent_turn(
                 "patient",
                 round_number,
-                patient_messages(self._require_vignette(), messages),
+                patient_messages(self._require_vignette(), messages, self.prompts),
             )
             messages.append(DialogueMessage(role="patient", content=patient_text))
             await self.emit(
@@ -210,7 +206,7 @@ class SimulationSession:
             doctor_text = await self._agent_turn(
                 "doctor",
                 round_number,
-                doctor_messages(messages, self.rounds, self.critiques),
+                doctor_messages(messages, self.rounds, self.critiques, self.prompts),
             )
             messages.append(DialogueMessage(role="doctor", content=doctor_text))
             await self.emit(
@@ -226,9 +222,9 @@ class SimulationSession:
                 "phase_started", phase="moderator", round=round_number
             )
             final_moderator = await self._structured(
-                moderator_messages(messages),
+                moderator_messages(messages, self.prompts),
                 ModeratorResult,
-                schema=MODERATOR_SCHEMA,
+                schema=self.prompts.schema("moderator"),
                 repair_kind="MODERATOR",
                 max_tokens=500,
             )
@@ -293,9 +289,9 @@ class SimulationSession:
         round_number = round_state.round_number
         await self.emit("phase_started", phase="ddx", round=round_number)
         ddx = await self._structured(
-            ddx_messages(round_state.messages),
+            ddx_messages(round_state.messages, self.prompts),
             DDxResult,
-            schema=DDX_SCHEMA,
+            schema=self.prompts.schema("ddx"),
             repair_kind="DDX",
             max_tokens=700,
         )
@@ -309,7 +305,10 @@ class SimulationSession:
         await self.emit("phase_started", phase="critic", round=round_number)
         critique = await self._complete(
             critic_messages(
-                self.condition or "", self._require_vignette(), round_state.messages
+                self.condition or "",
+                self._require_vignette(),
+                round_state.messages,
+                self.prompts,
             ),
             max_tokens=1200,
             temperature=0.2,
@@ -351,28 +350,39 @@ class SimulationSession:
         jobs = {
             "accuracy": self._rate_accuracy(vignette, round_state.ddx),
             "patient_actor": self._rate_quality(
-                patient_actor_rater_messages(vignette, round_state.messages),
+                patient_actor_rater_messages(
+                    vignette, round_state.messages, self.prompts
+                ),
                 PatientActorRaterOutput,
                 PATIENT_ACTOR_RUBRIC,
-                schema=PATIENT_ACTOR_SCHEMA,
+                schema=self.prompts.schema(
+                    "patient_actor",
+                    patient_actor_rubric_schema=rubric_schema(PATIENT_ACTOR_RUBRIC),
+                ),
                 repair_kind="PATIENT_ACTOR_RATER",
                 max_tokens=6500,
             ),
             "specialist": self._rate_quality(
                 specialist_rater_messages(
-                    vignette, round_state.messages, round_state.ddx
+                    vignette, round_state.messages, round_state.ddx, self.prompts
                 ),
                 SpecialistRaterOutput,
                 SPECIALIST_RUBRIC,
-                schema=SPECIALIST_SCHEMA,
+                schema=self.prompts.schema(
+                    "specialist",
+                    specialist_rubric_schema=rubric_schema(SPECIALIST_RUBRIC),
+                ),
                 repair_kind="SPECIALIST_RATER",
                 max_tokens=6500,
             ),
             "auto_paces": self._rate_quality(
-                auto_paces_rater_messages(round_state.messages),
+                auto_paces_rater_messages(round_state.messages, self.prompts),
                 AutoPacesRaterOutput,
                 AUTO_PACES_RUBRIC,
-                schema=AUTO_PACES_SCHEMA,
+                schema=self.prompts.schema(
+                    "auto_paces",
+                    auto_paces_rubric_schema=rubric_schema(AUTO_PACES_RUBRIC),
+                ),
                 repair_kind="AUTO_PACES_RATER",
                 max_tokens=1400,
             ),
@@ -411,9 +421,9 @@ class SimulationSession:
         self, vignette: Vignette, ddx: DDxResult
     ) -> AccuracyEvaluation:
         output = await self._structured(
-            accuracy_rater_messages(vignette, ddx),
+            accuracy_rater_messages(vignette, ddx, self.prompts),
             AccuracyRaterOutput,
-            schema=ACCURACY_SCHEMA,
+            schema=self.prompts.schema("accuracy"),
             repair_kind="ACCURACY_RATER",
             max_tokens=2200,
             validation_context={
@@ -535,7 +545,11 @@ class SimulationSession:
             initial_error_summary = self._structured_error_summary(initial_error)
             repaired = await self._complete(
                 json_repair_messages(
-                    raw, schema, repair_kind, initial_error_summary
+                    raw,
+                    schema,
+                    repair_kind,
+                    initial_error_summary,
+                    self.prompts,
                 ),
                 max_tokens=max_tokens,
                 temperature=0.0,

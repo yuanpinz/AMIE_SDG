@@ -12,6 +12,7 @@ sys.path.insert(0, str(PROJECT_DIR / "src"))
 
 from amie_self_play.config import Settings, load_model_catalog
 from amie_self_play.llm import ModelAPIClient
+from amie_self_play.prompt_config import load_prompt_catalog
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,11 +32,12 @@ async def call_model(args: argparse.Namespace) -> str:
     if args.config is not None:
         settings = replace(settings, config_path=args.config.expanduser())
     catalog = load_model_catalog(settings.config_path, settings)
+    prompts = load_prompt_catalog(settings.prompt_config_path)
     client = ModelAPIClient(settings, catalog=catalog)
     try:
         return await client.complete(
             [
-                {"role": "system", "content": "你是一个严谨、简洁的中文助手。"},
+                {"role": "system", "content": prompts.cli_system},
                 {"role": "user", "content": args.prompt},
             ],
             model_name=args.model or catalog.default_model,
