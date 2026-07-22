@@ -2,6 +2,37 @@
 
 本目录实现了 AMIE 论文 inner self-play 的交互原型：Vignette Generator、Patient、Doctor、Moderator 与 Critic 通过 WebSocket 编排，最多进行三轮同病例问诊和两次 Critic 改进反馈。每轮结束后按 `Doctor DDx → Critic → Evaluation` 执行，并生成论文量表对齐的模型代理评分。
 
+## 论文来源
+
+本项目基于并受以下 Nature 论文启发：
+
+> Tu, T. et al. **Towards conversational diagnostic artificial intelligence**. *Nature* (2025).  
+> <https://doi.org/10.1038/s41586-025-08866-7> · [Nature 文章页面](https://www.nature.com/articles/s41586-025-08866-7)
+
+项目主要围绕论文描述的 AMIE inner self-play 思路构建研究原型，用独立的 Vignette Generator、Patient、Doctor、Moderator、Critic 和 Evaluation 角色模拟多轮问诊与反馈改进。具体实现范围和未复现部分见下文“机制边界”。
+
+本仓库是独立的开源研究原型，不是论文作者或其所属机构发布的官方实现，也不能替代真实医疗服务或临床决策。
+
+## 界面预览
+
+以下截图展示了一次完整的研究模拟流程（病例：腕管综合征）：从输入疾病和选择模型开始，到多轮问诊、鉴别诊断、Critic 复盘以及最终 Evaluation 评分。截图仅用于说明界面和交互流程，页面中的评分是 model-based proxy，不代表真实临床评价。
+
+### 1. 启动页面与 Self-play 工作流
+
+![启动页面与 Self-play 工作流](docs/screenshots/01-launch-and-workflow.png)
+
+### 2. 多轮问诊与 Doctor DDx
+
+![多轮问诊与 Doctor DDx](docs/screenshots/02-consultation-and-ddx.png)
+
+### 3. Critic 复盘反馈
+
+![Critic 复盘反馈](docs/screenshots/03-critic-feedback.png)
+
+### 4. Evaluation 评分结果
+
+![Evaluation 评分结果](docs/screenshots/04-evaluation-results.png)
+
 ## 启动
 
 先创建本地模型 API 配置：
